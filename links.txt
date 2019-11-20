@@ -1,0 +1,5 @@
+BOX: https://app.box.com/s/e7nsmloj8xmblosvfg98q42fgqnjy6dv#
+WEB: https://sites.google.com/view/utarldd/home
+PAPER: https://arxiv.org/abs/1904.07312
+CODE: https://github.com/rezaghoddoosian/Early-Drowsiness-Detection
+DEMO: https://www.youtube.com/watch?v=3psnER2oVUA&feature=youtu.be
