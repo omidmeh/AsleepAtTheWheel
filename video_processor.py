@@ -5,15 +5,6 @@ Created on Sun Nov 24 18:01:46 2019
 @author: OMIDMEH
 """
 
-#%% add to path
-#import sys, os
-#sys.path
-#sys.path.append(r'C:\Users\OMIDMEH\Downloads\cv\opencv\build\x64\vc14\bin')
-#os.environ["PYTHONPATH"] = r'build\python' + ';' + os.environ["PYTHONPATH"]
-#sys.path.insert(0, r'C:\Users\OMIDMEH\Downloads\cv\opencv\build\python')
-#print(sys.path)
-#import cv2
-
 #%% Imports
 from imutils.video import FPS
 import numpy as np
@@ -168,53 +159,3 @@ print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
 cv2.destroyAllWindows()
 fvs.stop()
 
-
-#%% CV2 video reader
-#cap = cv2.VideoCapture(r'raw_data\\Fold3_part2\\33\\0.mp4')
-#print(cap.get(cv2.CAP_PROP_FPS))
-#fps = FPS().start()
-#f_no = 0
-#while(cap.isOpened()): 
-#    if (f_no % 50 == 0): print(f"frame {f_no}")
-#    if (f_no == 17651):
-#        print("hola")
-#    #Capture frame-by-frame 
-#    ret, frame = cap.read() 
-#    if ret == True: 
-#        pass
-#        # Display the resulting frame
-##        frame = imutils.resize(frame, width=350)
-##        process(frame)
-#        
-##        cv2.imshow('Frame', frame)        
-#
-#        # Press Q on keyboard to  exit 
-##        if cv2.waitKey(25) & 0xFF == ord('q'): 
-##            break
-#    
-#    # Break the loop 
-#    else:  
-#        break
-#    fps.update()
-#    f_no += 1
-#    
-#fps.stop()
-#print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
-##cv2.destroyAllWindows()
-#%%
-
-
-#%%
-
-#frame = vs.read()
-#
-#while frame:
-#    frame = vs.read()
-#    frame = imutils.resize(frame, width=400)
-#    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-#    cv2.imshow("Frame", frame)
-#    key = cv2.waitKey(1) & 0xFF
-#     
-#    if key == ord("q"):
-#        break
-#%% Video Procesing 

@@ -1,1 +1,3 @@
 .spyproject
+raw_data/*
+build/*
