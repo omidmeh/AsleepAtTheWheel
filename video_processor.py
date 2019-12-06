@@ -5,15 +5,6 @@ Created on Sun Nov 24 18:01:46 2019
 @author: OMIDMEH
 """
 
-#%% add to path
-#import sys, os
-#sys.path
-#sys.path.append(r'C:\Users\OMIDMEH\Downloads\cv\opencv\build\x64\vc14\bin')
-#os.environ["PYTHONPATH"] = r'build\python' + ';' + os.environ["PYTHONPATH"]
-#sys.path.insert(0, r'C:\Users\OMIDMEH\Downloads\cv\opencv\build\python')
-#print(sys.path)
-#import cv2
-
 #%% Imports
 from imutils.video import FPS
 import numpy as np
@@ -45,7 +36,7 @@ predictor = dlib.shape_predictor(path_pred)
 
 print("[INFO] starting video file thread...")
 #fvs = FileVideoStream(args["video"]).start()
-fvs = FileVideoStream(r'raw_data\\Fold3_part2\\33\\0.mp4').start()
+fvs = FileVideoStream(r'raw_data\\Fold3_part2\\33\\5.mp4').start()
 time.sleep(1.0)
  
 # start the FPS timer
@@ -85,7 +76,7 @@ def process(frame):
     # DLIB2
     rects = detector(gray, 0)
     if len(rects) == 0:
-        return_list = ['-1' for x in range(4+68)]
+        return_list = ['-1' for x in range(4+(68*2))]
     if len(rects) > 1 : 
         rects = [rects[0]]
     
@@ -103,7 +94,7 @@ def process(frame):
         # loop over the (x, y)-coordinates for the facial landmarks
         # and draw them on the image
         if len(shape) ==0:
-            return_list += ['-1' for x in range(68)]
+            return_list += ['-1' for x in range(68 * 2)]
         else:    
             assert(len(shape) == 68)
             return_list += [item for sublist in shape.tolist() for item in sublist]
@@ -114,6 +105,9 @@ def process(frame):
     # Display an image in a window 
 #    cv2.imshow('img',img) 
 #    cv2.imshow('gray cut',roi_gray) 
+    if not (len(return_list) == 68 * 2 + 4):
+        print(f"len{len(return_list)}")
+        print(f'{return_list}')
     return return_list
     
 #%% Merged
@@ -149,6 +143,7 @@ for i in range(frame_no, total_frames - 1):
   
     frame_row += process(frame)
     result_df.iloc[idx] = frame_row
+    if '-1' in frame_row: print(f"Missing data at frame [{frame_no}]")
     
     
     # Press Q on keyboard to  exit 
@@ -168,53 +163,3 @@ print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
 cv2.destroyAllWindows()
 fvs.stop()
 
-
-#%% CV2 video reader
-#cap = cv2.VideoCapture(r'raw_data\\Fold3_part2\\33\\0.mp4')
-#print(cap.get(cv2.CAP_PROP_FPS))
-#fps = FPS().start()
-#f_no = 0
-#while(cap.isOpened()): 
-#    if (f_no % 50 == 0): print(f"frame {f_no}")
-#    if (f_no == 17651):
-#        print("hola")
-#    #Capture frame-by-frame 
-#    ret, frame = cap.read() 
-#    if ret == True: 
-#        pass
-#        # Display the resulting frame
-##        frame = imutils.resize(frame, width=350)
-##        process(frame)
-#        
-##        cv2.imshow('Frame', frame)        
-#
-#        # Press Q on keyboard to  exit 
-##        if cv2.waitKey(25) & 0xFF == ord('q'): 
-##            break
-#    
-#    # Break the loop 
-#    else:  
-#        break
-#    fps.update()
-#    f_no += 1
-#    
-#fps.stop()
-#print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
-##cv2.destroyAllWindows()
-#%%
-
-
-#%%
-
-#frame = vs.read()
-#
-#while frame:
-#    frame = vs.read()
-#    frame = imutils.resize(frame, width=400)
-#    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-#    cv2.imshow("Frame", frame)
-#    key = cv2.waitKey(1) & 0xFF
-#     
-#    if key == ord("q"):
-#        break
-#%% Video Procesing 
