@@ -1,0 +1,5 @@
+video: ./raw_data/D10/37/0.mov
+metadata: 30.0 fps, 0 deg, 1080x720dropped: []
+elasped time: 1082.29
+approx. FPS: 18.92
+--------------------

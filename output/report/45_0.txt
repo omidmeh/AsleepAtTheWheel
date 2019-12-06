@@ -1,0 +1,5 @@
+video: ./raw_data/D12/45/0.mp4
+metadata: 12.5 fps, 180 deg, 427x240dropped: []
+elasped time: 365.66
+approx. FPS: 21.10
+--------------------

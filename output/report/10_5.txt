@@ -1,0 +1,5 @@
+video: ./raw_data/D3/10/5.MOV
+metadata: 30.0 fps, 90 deg, 720x1280dropped: []
+elasped time: 1067.04
+approx. FPS: 17.45
+--------------------

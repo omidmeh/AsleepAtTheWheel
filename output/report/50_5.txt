@@ -1,0 +1,5 @@
+video: ./raw_data/D13/50/5.MOV
+metadata: 30.0 fps, 90 deg, 720x1280dropped: []
+elasped time: 2792.88
+approx. FPS: 7.76
+--------------------

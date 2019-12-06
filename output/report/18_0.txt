@@ -1,0 +1,5 @@
+video: ./raw_data/D5/18/0.mov
+metadata: 29.97002997002997 fps, 0 deg, 1080x720dropped: []
+elasped time: 973.29
+approx. FPS: 11.99
+--------------------

@@ -1,0 +1,5 @@
+video: ./raw_data/D10/40/10.mp4
+metadata: 29.97002997002997 fps, 0 deg, 1280x720dropped: []
+elasped time: 971.77
+approx. FPS: 18.55
+--------------------

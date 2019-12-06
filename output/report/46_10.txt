@@ -1,0 +1,5 @@
+video: ./raw_data/D12/46/10.mov
+metadata: 30.0 fps, 0 deg, 1080x720dropped: []
+elasped time: 591.96
+approx. FPS: 30.02
+--------------------
