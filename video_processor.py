@@ -36,7 +36,7 @@ predictor = dlib.shape_predictor(path_pred)
 
 print("[INFO] starting video file thread...")
 #fvs = FileVideoStream(args["video"]).start()
-fvs = FileVideoStream(r'raw_data\\Fold3_part2\\33\\0.mp4').start()
+fvs = FileVideoStream(r'raw_data\\Fold3_part2\\33\\5.mp4').start()
 time.sleep(1.0)
  
 # start the FPS timer
@@ -76,7 +76,7 @@ def process(frame):
     # DLIB2
     rects = detector(gray, 0)
     if len(rects) == 0:
-        return_list = ['-1' for x in range(4+68)]
+        return_list = ['-1' for x in range(4+(68*2))]
     if len(rects) > 1 : 
         rects = [rects[0]]
     
@@ -94,7 +94,7 @@ def process(frame):
         # loop over the (x, y)-coordinates for the facial landmarks
         # and draw them on the image
         if len(shape) ==0:
-            return_list += ['-1' for x in range(68)]
+            return_list += ['-1' for x in range(68 * 2)]
         else:    
             assert(len(shape) == 68)
             return_list += [item for sublist in shape.tolist() for item in sublist]
@@ -105,6 +105,9 @@ def process(frame):
     # Display an image in a window 
 #    cv2.imshow('img',img) 
 #    cv2.imshow('gray cut',roi_gray) 
+    if not (len(return_list) == 68 * 2 + 4):
+        print(f"len{len(return_list)}")
+        print(f'{return_list}')
     return return_list
     
 #%% Merged
@@ -140,6 +143,7 @@ for i in range(frame_no, total_frames - 1):
   
     frame_row += process(frame)
     result_df.iloc[idx] = frame_row
+    if '-1' in frame_row: print(f"Missing data at frame [{frame_no}]")
     
     
     # Press Q on keyboard to  exit 
