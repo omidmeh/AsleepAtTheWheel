@@ -136,18 +136,12 @@ def get_table(participant, mood, start_time=60, stop_time=360, resample_interval
 
 # %%
 def make_tuples(df_in, scale=False):
-    print("Potato2")
     return_df = pd.DataFrame()
 
     if scale is False:
         scaled_df = df_in
     else:
-        scaled_df = pd.DataFrame()
-        for col in df_in.columns.values:
-            if 'px_' in col:
-                scaled_df[col] = df_in[col].sub(df_in['face_x']).div(df_in['face_w'])
-            elif 'py_' in col:
-                scaled_df[col] = df_in['face_y'].sub(df_in[col]).div(df_in['face_h'])
+        scaled_df = make_scale(df_in)
 
     for col in scaled_df.columns.values:
         if('px_' in col):
@@ -155,3 +149,18 @@ def make_tuples(df_in, scale=False):
             return_df[f'p{idx}'] = scaled_df[[f'px_{idx}', f'py_{idx}']].apply(tuple, axis=1)
     
     return return_df
+
+
+def make_scale(df_in):
+    assert('face_x' in df_in.columns.values)
+    assert('face_y' in df_in.columns.values)
+    assert('face_w' in df_in.columns.values)
+    assert('face_h' in df_in.columns.values)
+    
+    scaled_df = pd.DataFrame()
+    for col in df_in.columns.values:
+        if 'px_' in col:
+            scaled_df[col] = df_in[col].sub(df_in['face_x']).div(df_in['face_w'])
+        elif 'py_' in col:
+            scaled_df[col] = df_in['face_y'].sub(df_in[col]).div(df_in['face_h'])
+    return scaled_df
