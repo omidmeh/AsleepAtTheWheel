@@ -34,7 +34,9 @@ face_points_to_keep += [49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59] # Outer Lip
 
 columns_to_keep = ['participant', 'mood', 'time'] + \
                     [f'px_{x}' for x in face_points_to_keep] + \
-                    [f'py_{x}' for x in face_points_to_keep]
+                    [f'py_{x}' for x in face_points_to_keep] +\
+                    ['face_x','face_y','face_w','face_h']
+
 
 
 # filesDepth3 = glob.glob(os.path.join('output','csv',csv_pick_regex)) 
@@ -133,3 +135,23 @@ def get_table(participant, mood, start_time=60, stop_time=360, resample_interval
 
 
 # %%
+def make_tuples(df_in, scale=False):
+    print("Potato2")
+    return_df = pd.DataFrame()
+
+    if scale is False:
+        scaled_df = df_in
+    else:
+        scaled_df = pd.DataFrame()
+        for col in df_in.columns.values:
+            if 'px_' in col:
+                scaled_df[col] = df_in[col].sub(df_in['face_x']).div(df_in['face_w'])
+            elif 'py_' in col:
+                scaled_df[col] = df_in['face_y'].sub(df_in[col]).div(df_in['face_h'])
+
+    for col in scaled_df.columns.values:
+        if('px_' in col):
+            idx = col[3:]
+            return_df[f'p{idx}'] = scaled_df[[f'px_{idx}', f'py_{idx}']].apply(tuple, axis=1)
+    
+    return return_df
