@@ -18,6 +18,7 @@ from sklearn.metrics import mean_squared_error
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
+from keras.utils import to_categorical
 from numpy import split
 from numpy import array
 import sys 
@@ -25,14 +26,6 @@ from sklearn.model_selection import train_test_split
 sys.path.append("C:\\Users\\melbs\\OneDrive\\Desktop\\DSL")
 from omid import get_table
 
-# split a multivariate dataset into train/test sets
-def split_dataset(data):
-	# split into standard weeks
-	train, test = data[:-9000,:], data[-9000:,:]
-	# restructure into windows of 1 second data 
-	train = array(split(train, len(train)/10))
-	test = array(split(test, len(test)/10))
-	return train, test
 
 # convert series to supervised learning
 def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
@@ -93,7 +86,8 @@ X = array(reframed)
 scaler = MinMaxScaler(feature_range=(0, 1))
 X = scaler.fit_transform(X)
 y = dataset.mood[0:23995].values
-
+y[y!=0]=1
+y = to_categorical(y)
 # split into train and test sets
 X_train = X[0:18000] 
 X_test = X[18000:23995]
@@ -106,13 +100,13 @@ y_train = y_train[::5]
 X_test = X_test.reshape(1199,5,288)
 y_test = y_test[::5]
 
-# design network
+# design network 
 model = Sequential()
 model.add(LSTM(50, input_shape=(X_train.shape[1], X_train.shape[2])))
-model.add(Dense(1))
-model.compile(loss='mae', optimizer='adam',metrics=['accuracy'])
+model.add(Dense(2,activation='softmax'))
+model.compile(loss='categorical_crossentropy', optimizer='adam',metrics=['accuracy'])
 # fit network
-history = model.fit(X_train, y_train, epochs=50, batch_size=72, validation_data=(X_test, y_test), verbose=0, shuffle=False)
+history = model.fit(X_train, y_train, epochs=50, batch_size=32, validation_data=(X_test, y_test), verbose=0, shuffle=False)
 # plot history
 pyplot.plot(history.history['loss'], label='train')
 pyplot.plot(history.history['val_loss'], label='test')
@@ -126,4 +120,9 @@ print('Train: %.3f, Validation: %.3f' % (train_acc, val_acc))
 pyplot.plot(history.history['accuracy'], label='train')
 pyplot.plot(history.history['val_accuracy'], label='val')
 pyplot.legend()
+pyplot.show()
+
+y_pred = model.predict(X_test)
+pyplot.plot(y_pred)
+pyplot.plot(y)
 pyplot.show()
