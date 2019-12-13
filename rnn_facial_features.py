@@ -64,8 +64,8 @@ train_X, val_X, train_y, val_y = train_test_split(
     X, y, test_size=0.3, random_state=0)
 
 # reshape input to be 3D [samples, timesteps, features]
-train_X = train_X.reshape((train_X.shape[0],1, train_X.shape[1]))
-val_X = val_X.reshape((val_X.shape[0],1, val_X.shape[1]))
+train_X = train_X.reshape((train_X.shape[0],10, train_X.shape[1]))
+val_X = val_X.reshape((val_X.shape[0],10, val_X.shape[1]))
 print(train_X.shape, train_y.shape, val_X.shape, val_y.shape)
  
 # design network
@@ -110,7 +110,7 @@ test_y = labels
 scaler = MinMaxScaler(feature_range=(0, 1))
 test_X = scaler.fit_transform(test_X)
 # reshape input to be 3D [samples, timesteps, features]
-test_X = test_X.reshape((test_X.shape[0],1, test_X.shape[1]))
+test_X = test_X.reshape((test_X.shape[0],10, test_X.shape[1]))
 # Evaluate model 
 _, test_acc = model.evaluate(test_X, test_y, verbose=0)
 print('Test: %.3f' % (test_acc))

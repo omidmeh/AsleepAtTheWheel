@@ -101,8 +101,11 @@ X_test = X_test.reshape(1199,5,288)
 y_test = y_test[::5]
 
 # design network 
-model = Sequential()
+# tune learning parameters 
+# tune optimizers  (adam)
+# tune lstm input 
 model.add(LSTM(50, input_shape=(X_train.shape[1], X_train.shape[2])))
+#model.add(LSTM(50))
 model.add(Dense(2,activation='softmax'))
 model.compile(loss='categorical_crossentropy', optimizer='adam',metrics=['accuracy'])
 # fit network
@@ -123,6 +126,6 @@ pyplot.legend()
 pyplot.show()
 
 y_pred = model.predict(X_test)
-pyplot.plot(y_pred)
-pyplot.plot(y)
+pyplot.plot(y_pred[0])
+pyplot.plot(y[0])
 pyplot.show()
