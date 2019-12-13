@@ -1,3 +1,18 @@
 # Detection of driwsiness from images
-sunny was here
+
+## Todo: 
+
+General:
+
+
+ML Model:
+- [ ] Multiple LSTM layers + Final Softmax
+- [ ] Can we use a 2-dimentional point instead?
+- [ ] Processing multiple frames at the same time 
+
+Stretch Goal:
+- [ ] Visualization
+
+Resources:
+- https://ieeexplore.ieee.org/document/8016048
 
