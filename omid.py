@@ -108,10 +108,13 @@ def get_table(participant, mood, start_time=61, stop_time=361, resample_interval
     # Load
     logging.info(f"loading {files[0]}")
     table = pd.read_csv(files[0])
-    
+
     # Resample time
     table['date'] = pd.to_datetime(table.time, unit='s')
-    table = table.resample(resample_interval, on = 'date').mean()
+    if resample_interval is not None:
+        table = table.resample(resample_interval, on = 'date').mean()
+    else:
+        table.set_index('date', inplace = True)
     
     # Drop columns we don't need
     table = table.filter(columns_to_keep)
@@ -126,8 +129,8 @@ def get_table(participant, mood, start_time=61, stop_time=361, resample_interval
 
     # Fix Data Types
     table[['participant', 'mood']] = table[['participant', 'mood']].astype('int32')
-    pxy_cols = [x for x in table.columns if re.compile('p[xy]_*').match(x)]
-    table[pxy_cols] = table[pxy_cols].astype('int32')
+    # pxy_cols = [x for x in table.columns if re.compile('p[xy]_*').match(x)]
+    # table[pxy_cols] = table[pxy_cols].astype('int32')
 
 
     return table
@@ -180,3 +183,24 @@ def make_scale(df_in):
     return_df.drop(drop_cols,axis=1,inplace=True)
     
     return pd.concat([return_df, scaled_df], axis=1)
+
+
+def dist(mx, my ,nx, ny):
+
+    return np.sqrt(np.square(mx-nx) + np.square(my-ny))
+
+def mid(x1, x2):
+    return (x1+x2)/2
+
+def ratio_6(table, t1,t2,b1,b2,l,r):
+    x1_m= mid(table[f'px_{t1}'], table[f'px_{t2}'])
+    y1_m = mid(table[f'py_{t1}'], table[f'py_{t2}'])
+    x2_m = mid(table[f'px_{b1}'], table[f'px_{b2}'])
+    y2_m = mid(table[f'py_{b1}'], table[f'py_{b2}'])
+
+    return dist(x1_m,y1_m,x2_m,y2_m) / dist(table[f'px_{l}'], table[f'py_{l}'], table[f'px_{r}'], table[f'py_{r}'])
+
+def ratio_4(table, t,b,l,r):
+    return dist(table[f'px_{t}'],table[f'py_{t}'],table[f'px_{b}'],table[f'py_{b}']) / dist(table[f'px_{l}'], table[f'py_{l}'], table[f'px_{r}'], table[f'py_{r}'])
+
+
