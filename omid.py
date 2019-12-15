@@ -90,7 +90,7 @@ columns_to_keep = ['participant', 'mood', 'time'] + \
 
 
 # %%
-def get_table(participant, mood, start_time=60, stop_time=360, resample_interval='100ms', 
+def get_table(participant, mood, start_time=61, stop_time=361, resample_interval='100ms', 
                 base_path=None):
     
     # Find File
@@ -116,18 +116,19 @@ def get_table(participant, mood, start_time=60, stop_time=360, resample_interval
     # Drop columns we don't need
     table = table.filter(columns_to_keep)
 
+    # Trim head and tail of the video
+    table.drop(table[ table['time'] > stop_time ].index, inplace=True)
+    table.drop(table[ table['time'] < start_time ].index, inplace=True)
+
     # Fill missing data
     table.replace(-1, np.NaN, inplace=True)
-    table.interpolate(inplace=True)
+    table.interpolate(inplace=True, limit_direction='both')
 
     # Fix Data Types
     table[['participant', 'mood']] = table[['participant', 'mood']].astype('int32')
     pxy_cols = [x for x in table.columns if re.compile('p[xy]_*').match(x)]
     table[pxy_cols] = table[pxy_cols].astype('int32')
 
-    # Trim head and tail of the video
-    table.drop(table[ table['time'] > stop_time ].index, inplace=True)
-    table.drop(table[ table['time'] < start_time ].index, inplace=True)
 
     return table
 
@@ -151,6 +152,16 @@ def make_tuples(df_in, scale=False):
     return return_df
 
 
+def make_xy(df_in):
+    return_df = pd.DataFrame()
+
+    for col in df_in.columns.values:
+        if('px_' in col):
+            idx = col[3:]
+            return_df[f'p_xy_{idx}'] = df_in[f'px_{idx}']/df_in[f'py_{idx}']
+            
+    return pd.concat([df_in, return_df], axis=1)
+
 def make_scale(df_in):
     assert('face_x' in df_in.columns.values)
     assert('face_y' in df_in.columns.values)
@@ -162,5 +173,10 @@ def make_scale(df_in):
         if 'px_' in col:
             scaled_df[col] = df_in[col].sub(df_in['face_x']).div(df_in['face_w'])
         elif 'py_' in col:
-            scaled_df[col] = df_in['face_y'].sub(df_in[col]).div(df_in['face_h'])
-    return scaled_df
+            scaled_df[col] = df_in[col].sub(df_in['face_y']).div(df_in['face_h'])
+            
+    return_df = df_in.copy()
+    drop_cols = [x for x in df_in.columns.values if 'p' in x]
+    return_df.drop(drop_cols,axis=1,inplace=True)
+    
+    return pd.concat([return_df, scaled_df], axis=1)

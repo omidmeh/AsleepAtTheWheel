@@ -54,16 +54,30 @@ def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
 # %%
 # Load and prepare dataset
 ir_val = '50ms'
-df1 = get_table(31,0, resample_interval= ir_val)
-df2 = get_table(31,10, resample_interval= ir_val)
-df3 = get_table(45,0, resample_interval= ir_val)
-df4 = get_table(45,10, resample_interval= ir_val)
-df5 = get_table(51,0, resample_interval= ir_val)
-df6 = get_table(51,10, resample_interval= ir_val)
-df7 = get_table(60,0, resample_interval= ir_val)
-df8 = get_table(60,10, resample_interval= ir_val)
+# Load and prepare dataset
+df01 = get_table(31,0, resample_interval= ir_val)
+df02 = get_table(31,10, resample_interval= ir_val)
+df03 = get_table(34,10, resample_interval= ir_val)
+df04 = get_table(37,0, resample_interval= ir_val)
+df05 = get_table(37,10, resample_interval= ir_val)
+df06 = get_table(49,0, resample_interval= ir_val)
+df07 = get_table(51,0, resample_interval= ir_val)
+df08 = get_table(51,10, resample_interval= ir_val)
+df09 = get_table(60,0, resample_interval= ir_val)
+df10 = get_table(60,10, resample_interval= ir_val)
+df11 = get_table(18,0, resample_interval= ir_val)
+df12 = get_table(18,10, resample_interval= ir_val)
+df13 = get_table(23,0, resample_interval= ir_val)
+df14 = get_table(23,10, resample_interval= ir_val)
+df15 = get_table(26,0, resample_interval= ir_val)
+df16 = get_table(26,10, resample_interval= ir_val)
+df17 = get_table(27,10, resample_interval= ir_val)
+df18 = get_table(27,10, resample_interval= ir_val)
+
 #%%
-dataset = pd.concat([df1,df2,df3,df4,df5,df6,df7,df8],axis=0)
+#dfs = [df01,df02,df03,df04,df05,df06,df07,df08,df09,df10]
+#np.random.shuffle(dfs)
+dataset = pd.concat([df01,df02,df03,df04,df05,df06,df07,df08,df09,df10,df11,df12,df13,df14,df15,df16],axis=0)
 #scaled = make_scale(dataset)
 # %%
 def dist(mx, my ,nx, ny):
@@ -98,9 +112,9 @@ values = values.astype('float32')
 values.drop(['mood'],axis=1,inplace=True)
 # %%
 X = values
-reframed = series_to_supervised(X, n_steps, 1)
-print(reframed.shape)    
-X = array(reframed)
+#reframed = series_to_supervised(X, n_steps, 1)
+#print(reframed.shape)    
+#X = array(reframed)
 # %% normalize features
 scaler = MinMaxScaler(feature_range=(0, 1))
 X = scaler.fit_transform(X)
@@ -110,7 +124,7 @@ y[y!=0]=1
 y = to_categorical(y)
 # %%
 # split into train and test sets
-train_size = int(dataset.shape[0]*0.75-10)
+train_size = int((dataset.shape[0]*0.80)-n_steps)
 X_train = X[0:train_size] 
 X_test = X[train_size:X.shape[0]]
 y_train = y[0:train_size] 
@@ -127,39 +141,75 @@ y_test = y_test[::n_steps]
 print(X_train.shape, y_train.shape, X_test.shape, y_test.shape)
 #%% 
 # design network 
+#from keras.layers import Dropout
+
 # tune learning parameters 
 # tune optimizers  (adam)
 # tune lstm input 
+import timeit
+
+start = timeit.default_timer()
+
 model = Sequential()
-model.add(LSTM(100, input_shape=(X_train.shape[1], X_train.shape[2]),return_sequences=False))
+model.add(LSTM(50, input_shape=(X_train.shape[1], X_train.shape[2]),return_sequences=False))
 #model.add(LSTM(50,return_sequences=True))
 #model.add(LSTM(50))
-#model.add(LSTM(50))
+#model.add(LSTM(100))
+#model.add(Dropout(0.2))
 model.add(Dense(2,activation='softmax'))
 model.compile(loss='categorical_crossentropy', optimizer='adam',metrics=['accuracy'])
 # fit network
-history = model.fit(X_train, y_train, epochs=50, batch_size=32, validation_data=(X_test, y_test), verbose=0, shuffle=False)
+history = model.fit(X_train, y_train, epochs=20, batch_size=20, validation_data=(X_test, y_test), verbose=0, shuffle=False)
+
+stop = timeit.default_timer()
+
+print('Time: ', stop - start)  
 # %%
 # plot history
 pyplot.plot(history.history['loss'], label='train')
 pyplot.plot(history.history['val_loss'], label='test')
 pyplot.legend()
-pyplot.xlabel('hidden units')
+pyplot.xlabel('epochs')
 pyplot.ylabel('loss')
 pyplot.show()
 
 _, train_acc = model.evaluate(X_train, y_train, verbose=0)
 _, val_acc = model.evaluate(X_test, y_test, verbose=0)
-print('Train: %.3f, Validation: %.3f' % (train_acc, val_acc))
+print('Train: %.3f, Testing: %.3f' % (train_acc, val_acc))
 #plot history
 pyplot.plot(history.history['accuracy'], label='train')
-pyplot.plot(history.history['val_accuracy'], label='val')
-pyplot.xlabel('hidden units')
+pyplot.plot(history.history['val_accuracy'], label='test')
+pyplot.xlabel('epochs')
 pyplot.ylabel('accuracy')
 pyplot.legend()
 pyplot.show()
 
-#y_pred = model.predict(X_test)
-#pyplot.plot(y_pred[0])
-#pyplot.plot(y[0])
-#pyplot.show()
+#%%
+y_pred = model.predict(X_test)
+# convert to original format 
+y_pred = np.argmax(y_pred,1)
+y_true = np.argmax(y_test,1)
+
+from sklearn.metrics import roc_auc_score
+auc = roc_auc_score(y_true, y_pred)
+print(auc)
+# %%
+pyplot.plot(y_pred, label='y_pred')
+pyplot.plot(y_true, label='y_true')
+pyplot.legend()
+pyplot.show()
+
+# %%
+prediction = pd.DataFrame([y_pred,y_true], columns=['y_pred','y_true']).to_csv('prediction.csv')
+# %% 
+#for j in y_pred:
+#	if j[0]>j[1]:
+#		print("Driver is alert with the confidence of",(j[0]*100),"%")
+#	else:
+#		print("Driver is drowsy with the confidence of",(j[1]*100),"%")
+#		print("Sounding the alarm now....")
+#		# duration = 10  # second
+#		# freq = 440  # Hz
+#		# os.system('play --no-show-progress --null --channels 1 synth %s sine %f' % (duration, freq))
+#		for i in range(5):
+#			os.system('say "Wake up now"')
