@@ -18,6 +18,20 @@ import cv2
 import pandas as pd
 import glob,os.path
 from moviepy.editor import VideoFileClip
+import traceback
+import argparse
+
+#%% Arguments
+# initiate the parser
+parser = argparse.ArgumentParser()
+parser.add_argument("-d", "--directory", help="path to start from")
+
+# read arguments from the command line
+args = parser.parse_args()
+
+if args.directory:
+    print(args.directory)
+
 #%% Configuration
 path_haar = os.path.join('build','etc','haarcascades')
 
@@ -32,7 +46,7 @@ header = ['participant', 'mood', 'fps',
           'frame_no', 'time', 'face_x','face_y','face_w','face_h']
 
 width = 350
-progress_report = 50
+progress_report = None
 
 csv_output_path = os.path.join('.', 'output', 'csv')
 report_output_path = os.path.join('.', 'output', 'report')
@@ -83,7 +97,11 @@ class participent:
         videos = glob.glob(os.path.join(self.location,'*'))
         for video_path in videos:
             print(f"Path: {video_path}")
-            self.process_one_mood(video_path, width, progress_report)
+            try:
+                self.process_one_mood(video_path, width, progress_report)
+            except Exception as  e:
+                print(f"failed processing {video_path}: {e}")
+                traceback.print_tb(e.__traceback__)
 
         
     def process_one_mood(self, video_path, width, progress_report):
@@ -97,6 +115,8 @@ class participent:
         print("size_x: ", size_x)
         print("size_y: ", size_y)
         
+        assert(video_fps != 0)         
+
         mood = os.path.basename(video_path).split('.')[0]
         frame_len = 1/video_fps
         
@@ -225,7 +245,10 @@ class participent:
 #%% Main
 
 ## Find all folders
-filesDepth3 = glob.glob(os.path.join('raw_data','*','*'))
+if args.directory:
+    filesDepth3 = glob.glob(os.path.join(args.directory,'*'))
+else:
+    filesDepth3 = glob.glob(os.path.join('raw_data','*'))
 dirsDepth3 = filter(lambda f: os.path.isdir(f), filesDepth3)
 
 ## Process files
@@ -236,13 +259,18 @@ dirsDepth3 = filter(lambda f: os.path.isdir(f), filesDepth3)
     
     
 def run_participant(path):
+    print("processing", path)
     p_no = (os.path.basename(path))
     p = participent(p_no, path)
     p.process_all_moods(width, progress_report)
     
 from multiprocessing.dummy import Pool as ThreadPool 
-pool = ThreadPool(2) 
+print("start pooling")
+pool = ThreadPool(4) 
+print("Started")
+#print([x for x in dirsDepth3])
 results = pool.map(run_participant, dirsDepth3)
+print(results)
 
 # close the pool and wait for the work to finish 
 pool.close() 
