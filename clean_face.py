@@ -15,10 +15,15 @@ from keras.utils import to_categorical
 import sys 
 sys.path.append("C:\\Users\\melbs\\OneDrive\\Desktop\\DSL")
 from omid import *
+from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_auc_score
+
 
 # %%
 # Load and prepare dataset
+# resample value
 ir_val = '100ms'
+# step size
 n_steps = 20
 #n_size = int(4000)
 # Load and prepare dataset
@@ -39,55 +44,41 @@ df14 = get_table(60,10, resample_interval= ir_val)#[:n_size]
 df15 = get_table(31,10, resample_interval= ir_val)#[:n_size]
 df16 = get_table(31,0, resample_interval= ir_val)#[:n_size]
 #%%
+# concatenate datasize
 dfs = [df01,df02,df03,df04,df05,df06,df07,df08,df09,df10,df11,df12,df13,df14,df15,df16]
 #np.random.shuffle(dfs)
 dataset = pd.concat(dfs,axis=0)
 #scaled = make_scale(dataset)
 # %%
-#def prepare_data(dataset):
-
-    # add eye and mouth ratios 
+#Calculate eye and mouth ratio 
 dataset['eye_l_ratio'] = ratio_6(dataset,38,39,41,42,37,40) 
 dataset['eye_r_ratio'] = ratio_6(dataset,44,45,47,48,43,46)
-#dataset['mouth_ratio'] = ratio_4(dataset,52,58,49,55)
-dataset['mouth_ratio'] = ratio_6(dataset,44,45,47,48,43,46)
+dataset['mouth_ratio'] = ratio_4(dataset,52,58,49,55)
+#dataset['mouth_ratio'] = ratio_6(dataset,44,45,47,48,43,46)
 # drop face columns 
 dataset.drop(['face_x', 'face_y', 'face_w', 'face_h','time'], axis=1,inplace=True)
-
+# save as float 32 and drop participant and mood columns
 values = dataset
 values = values.astype('float32')
 values.drop(['mood','participant'],axis=1,inplace=True)
-# Define x 
+# Define X (features: x,y locations, and eye and mouth ratio)
 X = values
-#X.drop(['participant'])
 # normalize features
 scaler = MinMaxScaler(feature_range=(0, 1))
 X = scaler.fit_transform(X)
-# define y 
+# define y (drowsy or alert)
 y = dataset.mood[0:X.shape[0]].values
 y[y!=0]=1
 y = to_categorical(y)
-    #return dataset, X, y 
-#dataset, X, y = prepare_data(dataset)
 # %%
-# split into train and test sets
+# split into train and test sets 
+# Use first 14 videos for training, and last two for testing 
 train_size = int((dataset.shape[0]*(14/16)))
 X_train = X[0:train_size] 
 X_test = X[train_size:X.shape[0]]
 y_train = y[0:train_size] 
 y_test = y[train_size:X.shape[0]]
 # %%
-# Reshape input to 3D
-#def reshape_3d(X,y,n_steps):
-#    resize = int(X.shape[0]/n_steps)
-#    X.reshape(resize,n_steps,X.shape[1])
-#    y[::n_steps]
-#    return X,y
-#    
-#X_train,y_train = reshape_3d(X_train,y_train,n_steps)
-#X_test,y_test = reshape_3d(X_test,y_test,n_steps)
-#
-#print(X_train.shape, y_train.shape, X_test.shape, y_test.shape)
 # Reshape input to 3D 
 train_resize = int(X_train.shape[0]/n_steps)
 test_resize = int(X_test.shape[0]/n_steps)
@@ -118,7 +109,7 @@ stop = timeit.default_timer()
 
 print('Time: ', stop - start)  
 # %%
-# plot history
+# plot loss and accuracy history 
 pyplot.plot(history.history['loss'], label='train')
 pyplot.plot(history.history['val_loss'], label='test')
 pyplot.legend()
@@ -138,33 +129,43 @@ pyplot.legend()
 pyplot.show()
 
 #%%
+# save predictions and probabilities
+# show auc curve
 y_pred = model.predict(X_test)
-probas = model.predict_proba(X_test)
-   # Compute ROC curve and area the curve
-#fpr, tpr, thresholds = roc_curve(y[test], probas_[:, 1])
-#tprs.append(interp(mean_fpr, fpr, tpr))
-#tprs[-1][0] = 0.0
-#roc_auc = auc(fpr, tpr)
-# convert to original format 
-#y_pred = np.argmax(y_pred,1)
-#y_true = np.argmax(y_test,1)
+prob = model.predict_proba(X_test)
+# keep probabilities for drowsy outcome only 
+prob = prob[:,1]
+y_true = y_test[:,1]
+# calculate scores
+ffe_auc = roc_auc_score(y_true, prob)
+# summarize scores
+print('ROC AUC=%.3f' % (ffe_auc))
+# calculate roc curves
+fpr, tpr, _ = roc_curve(y_true, prob)
+# plot the roc curve for the model
+pyplot.plot(fpr, tpr, linestyle='-', label='FFE-LSTM')
+# axis labels
+pyplot.xlabel('False Positive Rate')
+pyplot.ylabel('True Positive Rate')
 
 # %%
-pyplot.plot(y_pred, label='y_pred')
-pyplot.plot(y_test, label='y_true')
+pyplot.plot(prob, label='y_pred')
+pyplot.plot(y_true, label='y_true')
 pyplot.legend()
+pyplot.xlabel('Samples')
+pyplot.ylabel('Prediction')
 pyplot.show()
 
-# %%
+# %% 
+# Save predictions to csv with participant, mood, EAR, MAR
 y_pred = pd.DataFrame(y_pred)
-y_true = pd.DataFrame(y_test)
-#%% 
+
 test_set = dataset[['participant','mood','eye_l_ratio','eye_r_ratio','mouth_ratio']]
 test_set = test_set[train_size:X.shape[0]]
 predictions = test_set[::20]
 predictions['alert'] = y_pred[[0]].values
 predictions['drowsy'] = y_pred[[1]].values
-#predictions.to_csv('prediction.csv')
+predictions.to_csv('prediction.csv')
 
 # %% 
 #for j in y_pred:
