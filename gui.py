@@ -9,95 +9,30 @@ import random
 import dlib
 from imutils import face_utils
 import numpy as np
-
-
-"""
-Demo program to open and play a file using OpenCV
-It's main purpose is to show you:
-1. How to get a frame at a time from a video file using OpenCV
-2. How to display an image in a PySimpleGUI Window
-For added fun, you can reposition the video using the slider.
-"""
-
-
-def main():
-    # ---===--- Get the filename --- #
-    filename = sg.popup_get_file('Filename to play')
-    if filename is None:
-        return
-    vidFile = cv.VideoCapture(filename)
-    # ---===--- Get some Stats --- #
-    num_frames = vidFile.get(cv.CAP_PROP_FRAME_COUNT)
-    fps = vidFile.get(cv.CAP_PROP_FPS)
-
-    sg.change_look_and_feel('Black')
-
-    # ---===--- define the window layout --- #
-    layout = [[sg.Text('OpenCV Demo', size=(15, 1), font='Helvetica 20')],
-              [sg.Image(filename='', key='-image-')],
-              [sg.Slider(range=(0, num_frames),
-                        size=(60, 10), orientation='h', key='-slider-')],
-              [sg.Button('Exit', size=(7, 1), pad=((600, 0), 3), font='Helvetica 14')]]
-
-    # create the window and show it without the plot
-    window = sg.Window('Demo Application - OpenCV Integration',
-                       layout,
-                       no_titlebar=False,
-                       location=(0, 0))
-
-    # locate the elements we'll be updating. Does the search only 1 time
-    image_elem = window['-image-']
-    slider_elem = window['-slider-']
-
-    # ---===--- LOOP through video file by frame --- #
-    cur_frame = 0
-    while vidFile.isOpened():
-        event, values = window.read(timeout=0)
-        if event in ('Exit', None):
-            break
-        ret, frame = vidFile.read()
-        if not ret:  # if out of data stop looping
-            break
-        # if someone moved the slider manually, the jump to that frame
-        if int(values['-slider-']) != cur_frame-1:
-            cur_frame = int(values['-slider-'])
-            vidFile.set(cv.CAP_PROP_POS_FRAMES, cur_frame)
-        slider_elem.update(cur_frame)
-        cur_frame += 1
-
-        frame_resized = imutils.resize(frame, width=300)
-        # img = cv.imencode('.png', frame)[1].tobytes()
-        imgbytes = cv.imencode('.png', frame_resized)[1].tobytes()  # ditto
-        image_elem.update(data=imgbytes)
-
-            #############
-            #    | |    #
-            #    | |    #
-            #    |_|    #
-            #  __   __  #
-            #  \ \ / /  #
-            #   \ V /   #
-            #    \_/    #
-"""         #############
-        # This was another way updates were being done, but seems slower than the above
-        img = Image.fromarray(frame)    # create PIL image from frame
-        bio = io.BytesIO()              # a binary memory resident stream
-        img.save(bio, format= 'PNG')    # save image as png to it
-        imgbytes = bio.getvalue()       # this can be used by OpenCV hopefully
-        image_elem.update(data=imgbytes)
-"""
+import datetime
 
 
 ## VARIABLES
-participant = 60
+participant = 31
 drowsiness = 'drowsy'
+mood_code = 0
+
+fe_pred_path = './prediction.csv'
+cnn_pred_path = './prediction.csv'
+
+filename = None
+filename = r'C:/Users/OMIDMEH/Development/UT/drowsiness_detection/raw_data/Fold3_part2/31/10.mp4'
+filename = r'C:/Users/OMIDMEH/Development/UT/drowsiness_detection/raw_data/Fold3_part2/00/32_10.mp4'
+filename = r'C:/Users/OMIDMEH/Development/UT/drowsiness_detection/raw_data/Fold3_part2/00/__.mp4'
+
+# L2
+
 STEP_SIZE = 1
 SAMPLES = 300
 SAMPLE_MAX = 0.5
 CANVAS_SIZE = (500, 100)
 NUMBER_MARKER_FREQUENCY = 20
 
-# L2
 path_haar = r'build\\etc\\haarcascades\\'
 path_pred_5  = r'facial-landmarks/shape_predictor_5_face_landmarks.dat'
 path_pred_68 = r'facial-landmarks/shape_predictor_68_face_landmarks.dat'
@@ -129,17 +64,18 @@ def main2():
     ### Video Prep ###
     ##################
     # ---===--- Get the filename --- #
-    # filename = sg.popup_get_file('Filename to play')
-    # if filename is None:
-    #     return
-    filename = r'C:/Users/OMIDMEH/Development/UT/drowsiness_detection/raw_data/Fold3_part2/31/10.mp4'
-    filename = r'C:/Users/OMIDMEH/Development/UT/drowsiness_detection/raw_data/Fold3_part2/00/32_10.mp4'
-    filename = r'C:/Users/OMIDMEH/Development/UT/drowsiness_detection/raw_data/Fold3_part2/00/__.mp4'
+    global filename
+    if filename is None:
+        filename = sg.popup_get_file('Filename to play')
+        if filename is None:
+            return
+    
     vidFile = cv.VideoCapture(filename)
     # ---===--- Get some Stats --- #
     num_frames = vidFile.get(cv.CAP_PROP_FRAME_COUNT)
     fps = vidFile.get(cv.CAP_PROP_FPS)
-
+    p_fe = Predictions(participant, mood_code, fps, fe_pred_path)
+    p_cnn = Predictions(participant, mood_code, fps, cnn_pred_path)
 
     
     ##################
@@ -190,7 +126,10 @@ def main2():
                 [sg.Text('Aspect Ratio: Eyes', size=(50, 1), font='Helvetica 8')],
                 [eye_graph],
                 [sg.Text('Aspect Ratio: Mouth', size=(50, 1), font='Helvetica 8')],
-                [mouth_graph]
+                [mouth_graph],
+                [sg.Text('Predictions:', size=(50, 1), font='Helvetica 16')],
+                [sg.Text('  Feature Engineering:', size=(50, 1), font='Helvetica 14', key='-pred_fe-')],
+                [sg.Text('  Inception + RNN:    ', size=(50, 1), font='Helvetica 14', key='-pred_cnn-')],
             ])
         ]
     ]
@@ -216,6 +155,9 @@ def main2():
     
     graph = window['graph']
     graph2 = window['graph2']
+    
+    pred_fe = window['-pred_fe-']
+    pred_cnn = window['-pred_cnn-']
     # graph.erase()
     # draw_axis(graph)
 
@@ -265,7 +207,7 @@ def main2():
             # loop over the (x, y)-coordinates for the facial landmarks
             # and draw them on the image
             for (xx, yy) in shape:
-                cv.circle(frame, (xx, yy), 1, (0, 0, 255), 2)
+                cv.circle(frame, (xx, yy), 1, (0, 0, 255), 1)
 
             if len(shape) > 0:
                 ratio_eye_l = ratio_6(shape, 37, 38, 40, 41, 36, 39)
@@ -287,6 +229,14 @@ def main2():
                 prev_mouth = ratio_mouth
                 i += STEP_SIZE if i < SAMPLES else 0
 
+        prediction_drowsy_fe = p_fe.get_pred(cur_frame)['drowsy']
+        prediction_drowsy_cnn = p_cnn.get_pred(cur_frame)['drowsy']
+
+        
+        # print(prediction_drowsy)
+        pred_fe.Update(f'  Feature Engineering: {prediction_drowsy_fe:.2f} | {drowsy_level_to_string(prediction_drowsy_fe)}')
+        pred_cnn.Update(f'  Inception Net + RNN: {prediction_drowsy_cnn:.2f} | {drowsy_level_to_string(prediction_drowsy_cnn)}')
+
 
         frame_resized = imutils.resize(frame, width=300)
         # img = cv.imencode('.png', frame)[1].tobytes()
@@ -295,40 +245,6 @@ def main2():
 
 
   
-    # while True:
-    #     event, values = window.read(timeout=0)
-    #     if event == 'Quit' or event is None:
-    #         break
-
-    #     graph_offset = random.randint(-10, 10)
-    #     graph_value = graph_value + graph_offset
-
-    #     if graph_value > SAMPLE_MAX:
-    #         graph_value = SAMPLE_MAX
-    #     if graph_value < 0:
-    #         graph_value = 0
-
-    #     new_x, new_y = i, graph_value
-    #     prev_value = graph_value
-
-    #     if i >= SAMPLES:
-    #         graph.move(-STEP_SIZE, 0)
-    #         graph2.move(-STEP_SIZE, 0)
-    #         prev_x = prev_x - STEP_SIZE
-
-    #     info = (graph_value, graph_value, graph_value, graph_value)
-    #     slider_elem.Update(values=[info])
-
-    #     graph.draw_line((prev_x, prev_y), (new_x, new_y), color='white')
-    #     graph2.draw_line((prev_x, prev_y), (new_x, new_y), color='white')
-
-    #     prev_x, prev_y = new_x, new_y
-    #     i += STEP_SIZE if i < SAMPLES else 0
-    
-    
-    # event, values = window.read()
-    # window.close()
-
 
 
 
@@ -347,5 +263,40 @@ def draw_axis(graph):
         graph.draw_line((-0.5, y), (0.5, y))
         if y != 0:
             graph.draw_text(str(y), (0, y), color='blue')
+
+
+class Predictions():
+    def __init__(self, participant, mood, fps, filepath):
+        self.participant = participant
+        self.fps = fps
+        self.mood = mood
+
+        self.df = pd.read_csv(filepath)
+        self.df = self.df[self.df.participant == self.participant]
+        self.df = self.df[self.df.mood == self.mood]
+        self.df['date'] = pd.to_datetime(self.df.date)
+        self.df.set_index('date', inplace = True)
+
+
+    def get_pred(self, frame_no):
+        sec = frame_no / self.fps
+        t = datetime.datetime(1970,1,1)
+        t += datetime.timedelta(seconds=sec)
+
+        try:
+            idx = self.df.index.get_loc(t,method='nearest')
+            # print('t,', t)
+            # print('index,', idx)
+            return self.df.iloc[idx]
+        except Exception as ex:
+            print(ex)
+            return {'drowsy' : -1}
+
+
+def drowsy_level_to_string(level, threshold = 0.50):
+    if level >= threshold:
+        return "Drowsy"
+    else:
+        return "Awake"
 
 main2()
