@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#%%
 import PySimpleGUI as sg
 from PIL import Image
 import cv2 as cv
@@ -10,33 +11,56 @@ import dlib
 from imutils import face_utils
 import numpy as np
 import datetime
+import matplotlib
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 
 ## VARIABLES
-participant = 31
-drowsiness = 'drowsy'
-mood_code = 0
 
-fe_pred_path = './prediction.csv'
-cnn_pred_path = './prediction.csv'
+
+participant = 31
+mood_code = 1
 
 filename = None
-filename = r'C:/Users/OMIDMEH/Development/UT/drowsiness_detection/raw_data/Fold3_part2/31/10.mp4'
-filename = r'C:/Users/OMIDMEH/Development/UT/drowsiness_detection/raw_data/Fold3_part2/00/32_10.mp4'
-filename = r'C:/Users/OMIDMEH/Development/UT/drowsiness_detection/raw_data/Fold3_part2/00/__.mp4'
-
+filename = f'C:/Users/OMIDMEH/Development/UT/drowsiness_detection/demo/{participant}_{mood_code}_short.mp4'
+# filename = r'C:/Users/OMIDMEH/Development/UT/drowsiness_detection/demo/31_0.mp4'
+# filename = r'C:/Users/OMIDMEH/Development/UT/drowsiness_detection/demo/31_10.mp4'
 # L2
 
 STEP_SIZE = 1
 SAMPLES = 300
-SAMPLE_MAX = 0.5
+SAMPLE_MAX = 0.7
 CANVAS_SIZE = (500, 100)
 NUMBER_MARKER_FREQUENCY = 20
+
+icon_warning = r"./demo/alarm.png"
+icon_ok = r"./demo/ok.png"
+
 
 path_haar = r'build\\etc\\haarcascades\\'
 path_pred_5  = r'facial-landmarks/shape_predictor_5_face_landmarks.dat'
 path_pred_68 = r'facial-landmarks/shape_predictor_68_face_landmarks.dat'
 path_pred = path_pred_68
+
+# Backup Vars
+fe_pred_path = './demo/pred_mel.csv'
+cnn_pred_path = './demo/pred_jay.csv'
+
+
+# filename = r'C:/Users/OMIDMEH/Development/UT/drowsiness_detection/demo/00_10.mp4'
+# fe_pred_path = './demo/crash_prediction.csv'
+# cnn_pred_path = './demo/crash_prediction_cnn.csv'
+# participant = 0
+# mood_code = 1
+
+
+# filename = r'C:/Users/OMIDMEH/Development/UT/drowsiness_detection/raw_data/Fold3_part2/31/10.mp4'
+# filename = r'C:/Users/OMIDMEH/Development/UT/drowsiness_detection/raw_data/Fold3_part2/00/32_10.mp4'
+# filename = r'C:/Users/OMIDMEH/Development/UT/drowsiness_detection/raw_data/Fold3_part2/00/__.mp4'
+# filename = r'C:/Users/OMIDMEH/Development/UT/drowsiness_detection/raw_data/Fold3_part2/31/10.mp4'
+
+#%%
 
 
 def dist(mx, my ,nx, ny):
@@ -93,8 +117,8 @@ def main2():
     sg.SetOptions(element_padding=(5, 5))
 
 
-    info_table_header = ['frame', 'left_eye_ratio', 'right_eye_ratio', 'mouth_ratio']
-    info_table_values = (150,0.5,0.5,0.2)
+    info_table_header = ['frame', 'time', 'left_eye_ratio', 'right_eye_ratio', 'mouth_ratio']
+    info_table_values = (150,0, 0.5,0.5,0.2)
 
     info_table = sg.Table(values=[info_table_values],
                         headings=info_table_header,
@@ -105,6 +129,15 @@ def main2():
                         num_rows=1,
                         hide_vertical_scroll=True,
                         key='infobar')
+    pred_table = sg.Table(values=[(0,0)],
+                        headings=['FFE+RNN', 'CNN+RNN'],
+                        max_col_width=7,
+                        auto_size_columns=False,
+                        justification='center',
+                        # alternating_row_color='lightblue',
+                        num_rows=1,
+                        hide_vertical_scroll=True,
+                        key='predbar')
 
     eye_graph = sg.Graph(CANVAS_SIZE, (0, 0), (SAMPLES, SAMPLE_MAX), background_color='black', key='graph')
     mouth_graph = sg.Graph(CANVAS_SIZE, (0, 0), (SAMPLES, SAMPLE_MAX*1.5), background_color='black', key='graph2')
@@ -113,7 +146,7 @@ def main2():
     layout2 = [
         [sg.Text('Drowsy Driver Detector', size=(40, 1), font='Helvetica 20')],
         [sg.Text(f'    Participant: {participant}', size=(40, 1), font='Helvetica 12')],
-        [sg.Text(f'    Nominal Drowsiness: {drowsiness}', size=(40, 1), font='Helvetica 12')],
+        [sg.Text(f'    Nominal Drowsiness: {drowsy_level_to_string(mood_code)}', size=(40, 1), font='Helvetica 12')],
         [
             sg.Column([
                 [sg.Image(filename=r'C:\Users\OMIDMEH\Pictures\PC_Wallpaper_gray.png', key='-image-')],
@@ -127,9 +160,20 @@ def main2():
                 [eye_graph],
                 [sg.Text('Aspect Ratio: Mouth', size=(50, 1), font='Helvetica 8')],
                 [mouth_graph],
-                [sg.Text('Predictions:', size=(50, 1), font='Helvetica 16')],
-                [sg.Text('  Feature Engineering:', size=(50, 1), font='Helvetica 14', key='-pred_fe-')],
-                [sg.Text('  Inception + RNN:    ', size=(50, 1), font='Helvetica 14', key='-pred_cnn-')],
+                [sg.Text('Predictions:', size=(50, 1), font='Helvetica 14')],
+                [
+                    sg.Column([
+                        [sg.Canvas(size=(100, 200), key='-bar_graph-')]
+                        ]),
+                    sg.Column([ 
+                        # [sg.Text('  FFN Confidence:', size=(30, 1), font='Helvetica 12', key='-pred_fe-')],
+                        [pred_table],
+                        [sg.Image(filename=r'./demo/ok.png', key='-pred_icon-', pad=(70,25))],
+                        [sg.Text('Result:', pad=(30,0), size=(20, 1), font='Helvetica 18', key='-pred_result-')],
+                        ])
+                ]
+               
+                
             ])
         ]
     ]
@@ -140,7 +184,48 @@ def main2():
                        layout2,
                        no_titlebar=False,
                        location=(0, 0))
+    window.Finalize()
+    ##################
+    ### Plot Setup ###
+    ##################
+    canvas_elem = window['-bar_graph-']
+    canvas = canvas_elem.TKCanvas
+    
+    # draw the initial plot in the window
+    plt.style.use('dark_background')
+    fig = plt.Figure()
+    ax = fig.add_subplot(111)
+    ax.set_title('Drowsy Level Prediction')
+    ax.figure.set_size_inches(3, 2)
+    ax.set_ylabel('Confidence')
+    # ax.set_xlabel("X axis")
+    ax.set_xticks((0,1))
+    ax.set_xticklabels(('FFE Confidence', 'CNN Confidence'))
+    ax.set_yticks(np.arange(0, 1, 0.1))
+    ax.set_ylim(0,1)
+    # ax.grid()
 
+    fig_agg = draw_figure(canvas, fig)
+
+    
+    
+    # values_to_plot = (0.5, 0.5)
+    width = 0.4
+    # ind = np.arange(len(values_to_plot))
+
+    
+
+    # p1 = plt.bar(ind, values_to_plot, width)
+    
+    # plt.style.use('dark_background')
+    # plt.ylabel('Confidence')
+    # plt.title('Drowsy Level Prediction')
+    # plt.xticks(ind, ('Drowsy - FFE', 'Drowsy - CNN'))
+    # plt.yticks(np.arange(0, 1, 0.1))
+    # plt.legend((p1[0],), ('Data Group 1',))
+
+    # fig = plt.gcf()  # if using Pyplot then get the figure from the plot
+    # figure_x, figure_y, figure_w, figure_h = fig.bbox.bounds
 
     ##################
     ### UI Update ####
@@ -148,16 +233,19 @@ def main2():
 
     # locate the elements we'll be updating. Does the search only 1 time
     image_elem = window['-image-']
+    icon_elem = window['-pred_icon-']
     slider_elem = window['-slider-']
     info_elem = window['infobar']
+    pred_elem = window['predbar']
     
     ## RANDOM DATA FOR GRAPH
     
     graph = window['graph']
     graph2 = window['graph2']
     
-    pred_fe = window['-pred_fe-']
-    pred_cnn = window['-pred_cnn-']
+    pred_result = window['-pred_result-']
+    # pred_fe = window['-pred_fe-']
+    # pred_cnn = window['-pred_cnn-']
     # graph.erase()
     # draw_axis(graph)
 
@@ -173,6 +261,9 @@ def main2():
     prev_x = 0
     prev_eye_r = 0
     prev_mouth = 0
+
+    prev_pred_ffe = 0
+    prev_pred_cnn = 0
 
     while vidFile.isOpened():
         event, values = window.read(timeout=0)
@@ -213,7 +304,7 @@ def main2():
                 ratio_eye_l = ratio_6(shape, 37, 38, 40, 41, 36, 39)
                 ratio_eye_r = ratio_6(shape, 43, 44, 46, 47, 42, 45)
                 ratio_mouth = ratio_4(shape, 51, 57, 48, 54)
-                info_elem.Update([(cur_frame,f'{ratio_eye_l:.2f}',f'{ratio_eye_r:.2f}',f'{ratio_mouth:.2f}')])
+                info_elem.Update([(cur_frame,str(datetime.timedelta(seconds=round(cur_frame/fps))), f'{ratio_eye_l:.2f}',f'{ratio_eye_r:.2f}',f'{ratio_mouth:.2f}')])
                 
                 
                 if i >= SAMPLES:
@@ -232,16 +323,69 @@ def main2():
         prediction_drowsy_fe = p_fe.get_pred(cur_frame)['drowsy']
         prediction_drowsy_cnn = p_cnn.get_pred(cur_frame)['drowsy']
 
+        # Plot results
+        if  prediction_drowsy_fe != prev_pred_ffe or prediction_drowsy_cnn != prev_pred_cnn:
+            # plt.close()
+
+            ind = np.arange(len((prediction_drowsy_fe, prediction_drowsy_cnn)))
+            # p1 = plt.bar(ind, (prediction_drowsy_fe, prediction_drowsy_cnn), width)
+            
+            # plt.style.use('dark_background')
+            # plt.ylabel('Confidence')
+            # plt.title('Drowsy Level Prediction')
+            # plt.xticks(ind, ('Drowsy - FFE', 'Drowsy - CNN'))
+            # plt.yticks(np.arange(0, 1, 0.1))
+            # plt.legend((p1[0],), ('Data Group 1',))
+
+            # fig = plt.gcf()  # if using Pyplot then get the figure from the plot
+            # fig.set_size_inches(3,2)
+
+            # canvas = window['-bar_graph-'].TKCanvas
+            # figure_canvas_agg = FigureCanvasTkAgg(fig, canvas)
+            # figure_canvas_agg.draw()
+            # figure_canvas_agg.get_tk_widget().
+            # figure_canvas_agg.get_tk_widget().pack_forget()
+            # # figure_canvas_agg.get_tk_widget().pack(side='top', fill='both', expand=1)
+            # figure_canvas_agg.get_tk_widget().pack()
+            # return figure_canvas_agg
+
+            ax.cla()                    # clear the subplot
+            # ax.grid()                   # draw the grid
+            ax.set_title('Drowsy Level Prediction')
+            ax.set_ylabel('Confidence')
+            # ax.set_xlabel("X axis")
+            ax.set_ylim(0,1)
+            ax.set_yticks(np.arange(0, 1, 0.1))
+            ax.bar(ind, (prediction_drowsy_fe, prediction_drowsy_cnn), width)
+            ax.set_xticks((0,1))
+            ax.set_xticklabels(('FFE Confidence', 'CNN Confidence'))
+            # ax.figure.set_size_inches(2, 3)
+            fig_agg.draw()
+
+            if prediction_drowsy_fe > 0.5 or prediction_drowsy_cnn > 0.5:
+                icon_elem.Update(filename=icon_warning)
+                pred_result.Update('Result: Drowsy')
+            else:
+                icon_elem.Update(filename=icon_ok)
+                pred_result.Update('Result: Alert')
+
+
+            
+            # fig_photo = draw_figure(window['-bar_graph-'].TKCanvas, fig)
+
+        prev_pred_ffe = prediction_drowsy_fe
+        prev_pred_cnn = prediction_drowsy_cnn
         
         # print(prediction_drowsy)
-        pred_fe.Update(f'  Feature Engineering: {prediction_drowsy_fe:.2f} | {drowsy_level_to_string(prediction_drowsy_fe)}')
-        pred_cnn.Update(f'  Inception Net + RNN: {prediction_drowsy_cnn:.2f} | {drowsy_level_to_string(prediction_drowsy_cnn)}')
+        # pred_fe.Update(f'  FFN Confidence: {prediction_drowsy_fe:.2f} | {drowsy_level_to_string(prediction_drowsy_fe)}')
+        # pred_cnn.Update(f'  CNN Confidence: {prediction_drowsy_cnn:.2f} | {drowsy_level_to_string(prediction_drowsy_cnn)}')
+        pred_elem.Update([(f'{prev_pred_ffe:.3f}', f'{prev_pred_cnn:.3f}')])
 
 
         frame_resized = imutils.resize(frame, width=300)
         # img = cv.imencode('.png', frame)[1].tobytes()
         imgbytes = cv.imencode('.png', frame_resized)[1].tobytes()  # ditto
-        image_elem.update(data=imgbytes)
+        image_elem.Update(data=imgbytes)
 
 
   
@@ -264,12 +408,13 @@ def draw_axis(graph):
         if y != 0:
             graph.draw_text(str(y), (0, y), color='blue')
 
-
+#%%
 class Predictions():
-    def __init__(self, participant, mood, fps, filepath):
+    def __init__(self, participant, mood, fps, filepath, f=False):
         self.participant = participant
         self.fps = fps
         self.mood = mood
+        self.f = f
 
         self.df = pd.read_csv(filepath)
         self.df = self.df[self.df.participant == self.participant]
@@ -299,4 +444,11 @@ def drowsy_level_to_string(level, threshold = 0.50):
     else:
         return "Awake"
 
+def draw_figure(canvas, figure, loc=(0, 0)):
+    figure_canvas_agg = FigureCanvasTkAgg(figure, canvas)
+    figure_canvas_agg.draw()
+    figure_canvas_agg.get_tk_widget().pack(side='top', fill='both', expand=1)
+    return figure_canvas_agg
+
+#%%
 main2()
